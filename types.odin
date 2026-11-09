@@ -8,11 +8,7 @@ Direction :: enum {
 }
 
 Snake :: struct {
-	cell_size:          i32,
-	pos_x:              i32,
-	pos_y:              i32,
 	body:               [dynamic]Cell,
-	len:                i32,
 	current_direction:  Direction,
 	buffered_direction: Direction,
 }
