@@ -8,15 +8,18 @@ Direction :: enum {
 }
 
 Snake :: struct {
-	sizeX:              i32,
-	sizeY:              i32,
-	posX:               i32,
-	posY:               i32,
-	ghost_pos_x:        i32,
-	ghost_pos_y:        i32,
+	cell_size:          i32,
+	pos_x:              i32,
+	pos_y:              i32,
+	body:               [dynamic]Cell,
 	len:                i32,
 	current_direction:  Direction,
 	buffered_direction: Direction,
+}
+
+Cell :: struct {
+	pos_x: i32,
+	pos_y: i32,
 }
 
 Grid :: struct {

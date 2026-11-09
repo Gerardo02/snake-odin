@@ -23,20 +23,18 @@ main :: proc() {
 	rl.SetTargetFPS(60)
 
 	snake := Snake {
-		sizeX              = 32,
-		sizeY              = 32,
-		posX               = 15,
-		posY               = 15,
-		ghost_pos_x        = 14,
-		ghost_pos_y        = 15,
+		cell_size          = 32,
+		body               = make([dynamic]Cell, 0, 64),
 		current_direction  = Direction.RIGHT,
 		buffered_direction = Direction.RIGHT,
-		len                = 3,
 	}
+	defer delete(snake.body)
+
+	append(&snake.body, Cell{15, 15}, Cell{14, 15}, Cell{13, 15})
 
 	level_grid := Grid {
-		sizeX = 40,
-		sizeY = 40,
+		sizeX = 25,
+		sizeY = 25,
 	}
 
 	accumulator: f32
@@ -69,29 +67,34 @@ main :: proc() {
 draw_snake :: proc(snake: ^Snake) {
 	snake_color := rl.GREEN
 
-	rl.DrawRectangle(
-		snake.posX * snake.sizeX,
-		snake.posY * snake.sizeY,
-		snake.sizeX,
-		snake.sizeY,
-		snake_color,
-	)
-
+	for cell in snake.body {
+		rl.DrawRectangle(
+			cell.pos_x * snake.cell_size,
+			cell.pos_y * snake.cell_size,
+			snake.cell_size,
+			snake.cell_size,
+			snake_color,
+		)
+	}
 }
 
 update_snake :: proc(snake: ^Snake) {
-	if snake.buffered_direction == Direction.UP {
-		snake.posY -= 1
-	} else if snake.buffered_direction == Direction.DOWN {
-		snake.posY += 1
-	} else if snake.buffered_direction == Direction.RIGHT {
-		snake.posX += 1
-	} else if snake.buffered_direction == Direction.LEFT {
-		snake.posX -= 1
-	}
+	for i := len(snake.body) - 1; i >= 0; i -= 1 {
+		if i == 0 {
+			if snake.buffered_direction == Direction.UP {
+				snake.body[i].pos_y -= 1
+			} else if snake.buffered_direction == Direction.DOWN {
+				snake.body[i].pos_y += 1
+			} else if snake.buffered_direction == Direction.RIGHT {
+				snake.body[i].pos_x += 1
+			} else if snake.buffered_direction == Direction.LEFT {
+				snake.body[i].pos_x -= 1
+			}
 
-	// snake.ghost_pos_x = snake.posX
-	// snake.ghost_pos_y = snake.posY
+			break
+		}
+		snake.body[i] = snake.body[i - 1]
+	}
 
 	snake.current_direction = snake.buffered_direction
 }
@@ -128,7 +131,13 @@ draw_background :: proc(grid: Grid, snake: Snake) {
 	for y in 0 ..< grid.sizeY {
 		for x in 0 ..< grid.sizeX {
 			c := rl.Color{25, 25, 25, 255} if (x + y) % 2 == 0 else rl.Color{32, 32, 32, 255}
-			rl.DrawRectangle(x * snake.sizeX, y * snake.sizeY, snake.sizeX, snake.sizeY, c)
+			rl.DrawRectangle(
+				x * snake.cell_size,
+				y * snake.cell_size,
+				snake.cell_size,
+				snake.cell_size,
+				c,
+			)
 		}
 	}
 }
