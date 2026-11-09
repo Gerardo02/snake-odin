@@ -23,11 +23,15 @@ main :: proc() {
 	rl.SetTargetFPS(60)
 
 	snake := Snake {
-		sizeX = 32,
-		sizeY = 32,
-		posX  = 15,
-		posY  = 15,
-		dir   = Direction.RIGHT,
+		sizeX              = 32,
+		sizeY              = 32,
+		posX               = 15,
+		posY               = 15,
+		ghost_pos_x        = 14,
+		ghost_pos_y        = 15,
+		current_direction  = Direction.RIGHT,
+		buffered_direction = Direction.RIGHT,
+		len                = 3,
 	}
 
 	level_grid := Grid {
@@ -36,66 +40,83 @@ main :: proc() {
 	}
 
 	accumulator: f32
+	ticked_frame := false
 
 	for !rl.WindowShouldClose() {
 		rl.BeginDrawing()
+		ticked_frame = false
 		rl.ClearBackground(rl.SKYBLUE)
 
 		draw_background(level_grid, snake)
 
 		draw_apple()
+		draw_snake(&snake)
 
-		rl.DrawRectangle(
-			snake.posX * snake.sizeX,
-			snake.posY * snake.sizeY,
-			snake.sizeX,
-			snake.sizeY,
-			rl.GREEN,
-		)
-
-		snake_movement(&snake)
+		snake_movement_direction(&snake)
 
 		accumulator += rl.GetFrameTime()
 		if accumulator >= TICK_RATE {
 			accumulator -= TICK_RATE
 
 			update_snake(&snake)
+			ticked_frame = true
 		}
-
 
 		rl.EndDrawing()
 	}
 }
 
-update_snake :: proc(snake: ^Snake) {
-	if snake.dir == Direction.UP {
-		snake.posY -= 1
-	} else if snake.dir == Direction.DOWN {
-		snake.posY += 1
-	} else if snake.dir == Direction.RIGHT {
-		snake.posX += 1
-	} else if snake.dir == Direction.LEFT {
-		snake.posX -= 1
-	}
+draw_snake :: proc(snake: ^Snake) {
+	snake_color := rl.GREEN
+
+	rl.DrawRectangle(
+		snake.posX * snake.sizeX,
+		snake.posY * snake.sizeY,
+		snake.sizeX,
+		snake.sizeY,
+		snake_color,
+	)
+
 }
 
-snake_movement :: proc(snake: ^Snake) {
+update_snake :: proc(snake: ^Snake) {
+	if snake.buffered_direction == Direction.UP {
+		snake.posY -= 1
+	} else if snake.buffered_direction == Direction.DOWN {
+		snake.posY += 1
+	} else if snake.buffered_direction == Direction.RIGHT {
+		snake.posX += 1
+	} else if snake.buffered_direction == Direction.LEFT {
+		snake.posX -= 1
+	}
+
+	// snake.ghost_pos_x = snake.posX
+	// snake.ghost_pos_y = snake.posY
+
+	snake.current_direction = snake.buffered_direction
+}
+
+snake_movement_direction :: proc(snake: ^Snake) {
 	if rl.IsKeyPressed(.UP) {
-		if snake.dir == Direction.UP {return}
+		if snake.current_direction == Direction.UP ||
+		   snake.current_direction == Direction.DOWN {return}
 
-		snake.dir = Direction.UP
+		snake.buffered_direction = Direction.UP
 	} else if rl.IsKeyPressed(.DOWN) {
-		if snake.dir == Direction.DOWN {return}
+		if snake.current_direction == Direction.DOWN ||
+		   snake.current_direction == Direction.UP {return}
 
-		snake.dir = Direction.DOWN
+		snake.buffered_direction = Direction.DOWN
 	} else if rl.IsKeyPressed(.RIGHT) {
-		if snake.dir == Direction.RIGHT {return}
+		if snake.current_direction == Direction.RIGHT ||
+		   snake.current_direction == Direction.LEFT {return}
 
-		snake.dir = Direction.RIGHT
+		snake.buffered_direction = Direction.RIGHT
 	} else if rl.IsKeyPressed(.LEFT) {
-		if snake.dir == Direction.LEFT {return}
+		if snake.current_direction == Direction.LEFT ||
+		   snake.current_direction == Direction.RIGHT {return}
 
-		snake.dir = Direction.LEFT
+		snake.buffered_direction = Direction.LEFT
 	}
 }
 
