@@ -1,6 +1,7 @@
 package main
 
 Direction :: enum {
+	EMPTY,
 	UP,
 	DOWN,
 	LEFT,
@@ -10,7 +11,7 @@ Direction :: enum {
 Snake :: struct {
 	body:               [dynamic]Cell,
 	current_direction:  Direction,
-	buffered_direction: Direction,
+	buffered_direction: [3]Direction,
 }
 
 Cell :: struct {
@@ -19,6 +20,6 @@ Cell :: struct {
 }
 
 Grid :: struct {
-	sizeX: i32,
-	sizeY: i32,
+	size_x: i32,
+	size_y: i32,
 }
