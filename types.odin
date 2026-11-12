@@ -8,6 +8,13 @@ Direction :: enum {
 	RIGHT,
 }
 
+Game_State :: enum {
+	MENU,
+	PAUSE,
+	GAME,
+	DEAD,
+}
+
 Snake :: struct {
 	body:               [dynamic]Cell,
 	current_direction:  Direction,

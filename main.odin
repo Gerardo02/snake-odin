@@ -3,6 +3,7 @@ package main
 import "core:fmt"
 import "core:math/rand"
 import "core:mem"
+import "core:slice"
 import rl "vendor:raylib"
 
 main :: proc() {
@@ -22,6 +23,8 @@ main :: proc() {
 	rl.InitWindow(WIN_W, WIN_H, "Snake")
 	defer rl.CloseWindow()
 	rl.SetTargetFPS(60)
+
+	game_state: Game_State = .GAME
 
 	snake := Snake {
 		body              = make([dynamic]Cell, 0, 64),
@@ -46,36 +49,117 @@ main :: proc() {
 		ticked_frame = false
 		rl.ClearBackground(rl.SKYBLUE)
 
-		draw_background(level_grid, snake)
+		switch game_state {
+		case .MENU:
+			game_state = .GAME
+			break
+		case .GAME:
+			draw_background(level_grid, snake)
 
-		draw_apple(apple)
-		draw_snake(&snake)
+			draw_apple(apple)
+			draw_snake(&snake)
 
-		snake_movement_direction(&snake)
+			snake_movement_direction(&snake)
 
-		accumulator += rl.GetFrameTime()
-		if accumulator >= TICK_RATE {
-			accumulator -= TICK_RATE
+			accumulator += rl.GetFrameTime()
+			if accumulator >= TICK_RATE {
+				accumulator -= TICK_RATE
 
-			update_snake(&snake)
-			ticked_frame = true
+				update_snake(&snake)
+
+				if hit_self(snake.body[:]) || hit_wall(snake.body[0], level_grid) {
+					game_state = .DEAD
+					break
+				}
+
+				ticked_frame = true
+			}
+
+			if snake.body[0] == apple {
+				eat_apple(&apple, &snake, level_grid)
+			}
+
+			if rl.IsKeyPressed(.R) {
+				restart_game(&snake, &game_state)
+				eat_apple(&apple, &snake, level_grid)
+			} else if rl.IsKeyPressed(.SPACE) {
+				game_state = .PAUSE
+				break
+			}
+		case .DEAD:
+			draw_background(level_grid, snake)
+
+			draw_apple(apple)
+			draw_snake(&snake)
+
+			rl.DrawText(
+				"You died\nPress R to restart",
+				WIN_W / 2 - 85,
+				WIN_H / 2,
+				24,
+				rl.LIGHTGRAY,
+			)
+
+			if rl.IsKeyPressed(.R) {
+				restart_game(&snake, &game_state)
+				eat_apple(&apple, &snake, level_grid)
+			}
+		case .PAUSE:
+			draw_background(level_grid, snake)
+
+			draw_apple(apple)
+			draw_snake(&snake)
+
+			rl.DrawText("Pause", WIN_W / 2, WIN_H / 2, 24, rl.LIGHTGRAY)
+
+			if rl.IsKeyPressed(.SPACE) {
+				game_state = .GAME
+				break
+			}
 		}
 
-		if snake.body[0] == apple {
-			eat_apple(&apple, &snake, level_grid)
-		}
 
 		rl.EndDrawing()
 	}
 }
 
+hit_wall :: proc(head: Cell, level_grid: Grid) -> bool {
+	if head.pos_x >= level_grid.size_x {
+		return true
+	} else if head.pos_x < 0 {
+		return true
+	} else if head.pos_y >= level_grid.size_y {
+		return true
+	} else if head.pos_y < 0 {
+		return true
+	}
+
+	return false
+}
+
+hit_self :: proc(body: []Cell) -> bool {
+	if slice.contains(body[1:], body[0]) {
+		return true
+	}
+
+	return false
+}
+
 eat_apple :: proc(apple: ^Cell, snake: ^Snake, grid: Grid) {
-	last_cell := snake.body[len(snake.body) - 1]
+	last_cell: Cell
+
+	if len(snake.body) == 0 {
+		last_cell = Cell{15, 15}
+	} else {
+		last_cell = snake.body[len(snake.body) - 1]
+	}
 
 	append(&snake.body, last_cell)
 
-	apple.pos_x = rand.int32_range(0, grid.size_x - 1)
-	apple.pos_y = rand.int32_range(0, grid.size_y - 1)
+	for {
+		apple^ = Cell{rand.int32_range(0, grid.size_x), rand.int32_range(0, grid.size_y)}
+		if !slice.contains(snake.body[:], apple^) {break}
+	}
 }
 
 draw_snake :: proc(snake: ^Snake) {
@@ -90,6 +174,18 @@ draw_snake :: proc(snake: ^Snake) {
 			snake_color,
 		)
 	}
+}
+
+restart_game :: proc(snake: ^Snake, game_state: ^Game_State) {
+	clear(&snake.body)
+
+	for _, i in snake.buffered_direction {
+		snake.buffered_direction[i] = .EMPTY
+	}
+
+	snake.current_direction = .RIGHT
+
+	game_state^ = .GAME
 }
 
 update_snake :: proc(snake: ^Snake) {
