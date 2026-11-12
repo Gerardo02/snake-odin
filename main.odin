@@ -25,6 +25,7 @@ main :: proc() {
 	rl.SetTargetFPS(60)
 
 	game_state: Game_State = .GAME
+	score := 0
 
 	snake := Snake {
 		body              = make([dynamic]Cell, 0, 64),
@@ -77,10 +78,11 @@ main :: proc() {
 
 			if snake.body[0] == apple {
 				eat_apple(&apple, &snake, level_grid)
+				score += 1
 			}
 
 			if rl.IsKeyPressed(.R) {
-				restart_game(&snake, &game_state)
+				restart_game(&snake, &game_state, &score)
 				eat_apple(&apple, &snake, level_grid)
 			} else if rl.IsKeyPressed(.SPACE) {
 				game_state = .PAUSE
@@ -101,7 +103,7 @@ main :: proc() {
 			)
 
 			if rl.IsKeyPressed(.R) {
-				restart_game(&snake, &game_state)
+				restart_game(&snake, &game_state, &score)
 				eat_apple(&apple, &snake, level_grid)
 			}
 		case .PAUSE:
@@ -118,8 +120,12 @@ main :: proc() {
 			}
 		}
 
+		score_text := fmt.ctprintf("Score: %d", score)
+		rl.DrawText(score_text, 0, 0, 24, rl.RED)
 
 		rl.EndDrawing()
+
+		free_all(context.temp_allocator)
 	}
 }
 
@@ -176,7 +182,7 @@ draw_snake :: proc(snake: ^Snake) {
 	}
 }
 
-restart_game :: proc(snake: ^Snake, game_state: ^Game_State) {
+restart_game :: proc(snake: ^Snake, game_state: ^Game_State, score: ^int) {
 	clear(&snake.body)
 
 	for _, i in snake.buffered_direction {
@@ -184,6 +190,8 @@ restart_game :: proc(snake: ^Snake, game_state: ^Game_State) {
 	}
 
 	snake.current_direction = .RIGHT
+
+	score^ = 0
 
 	game_state^ = .GAME
 }
